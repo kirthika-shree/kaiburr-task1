@@ -1,0 +1,246 @@
+TASK-1
+
+SERVERCONTROLL.JAVA
+
+package com.kaiburr.task1.controller;
+
+import java.util.List;
+import java.util.Optional;
+
+import com.kaiburr.task1.model.Server;
+import com.kaiburr.task1.service.ServerServiceImpl;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@CrossOrigin(origins = "*")
+@RequestMapping("/servers")
+public class ServerController {
+
+    @Autowired
+    private ServerServiceImpl serverServiceImpl;
+
+    @GetMapping(value = "/getServer")
+    public List<Server> getAllServers() {
+        return serverServiceImpl.findAll();
+    }
+
+    @GetMapping(value = "/getServer", params = "id")
+    public ResponseEntity<?> getServerById(@RequestParam String id) {
+        Optional<Server> server = serverServiceImpl.findById(id);
+        if (server.isPresent()) {
+            return new ResponseEntity<Server>(server.get(), HttpStatus.OK);
+        } else {
+            return new ResponseEntity<String>("Server not found!", HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @GetMapping(value = "/getServer", params = "name")
+    public ResponseEntity<?> getServerByName(@RequestParam String name) {
+        List<Server> servers = serverServiceImpl.findByName(name);
+        if (servers.isEmpty()) {
+            return new ResponseEntity<String>("Server not found!", HttpStatus.NOT_FOUND);
+        } else {
+            return new ResponseEntity<List<Server>>(servers, HttpStatus.OK);
+        }
+    }
+
+    @PutMapping(value = "/createServer")
+    public ResponseEntity<?> createOrUpdateServer(@RequestBody Server server) {
+        serverServiceImpl.createOrUpdateServer(server);
+        return new ResponseEntity<String>("Server added successfully!", HttpStatus.OK);
+    }
+
+    @DeleteMapping(value = "/deleteServer")
+    public ResponseEntity<?> deleteServer(@RequestParam String id) {
+        if (serverServiceImpl.existsServerById(id)) {
+            serverServiceImpl.deleteServerById(id);
+            return new ResponseEntity<String>("Server deleted successfully!", HttpStatus.OK);
+        }
+        return new ResponseEntity<String>("Server not exists!", HttpStatus.OK);
+    }
+
+}
+
+
+
+SERVER.JAVA
+
+package com.kaiburr.task1.model;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+@Document(collection = "servers")
+public class Server {
+
+    @Id
+    private String id;
+    private String name;
+    private String language;
+    private String framework;
+
+    public Server(String id, String name, String language, String framework) {
+        this.id = id;
+        this.name = name;
+        this.language = language;
+        this.framework = framework;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
+    }
+
+    public String getFramework() {
+        return framework;
+    }
+
+    public void setFramework(String framework) {
+        this.framework = framework;
+    }
+
+    @Override
+    public String toString() {
+        return "Server [framework=" + framework + ", id=" + id + ", language=" + language + ", name=" + name + "]";
+    }
+
+}
+
+
+SERVERREPOSITORY.JAVA
+
+package com.kaiburr.task1.repository;
+
+import java.util.List;
+
+import com.kaiburr.task1.model.Server;
+
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface ServerRepository extends MongoRepository<Server, String> {
+
+	List<Server> findByName(String name);
+}
+
+
+
+SERVERSERVICE.JAVA
+
+package com.kaiburr.task1.service;
+
+import java.util.List;
+import java.util.Optional;
+
+import com.kaiburr.task1.model.Server;
+
+public interface ServerService {
+
+    List<Server> findAll();
+
+    Optional<Server> findById(String Id);
+
+    void createOrUpdateServer(Server server);
+
+    void deleteServerById(String Id);
+
+    List<Server> findByName(String name);
+}
+
+
+SERVERSERVICEIMPL.JAVA
+
+package com.kaiburr.task1.service;
+
+import java.util.List;
+import java.util.Optional;
+
+import com.kaiburr.task1.model.Server;
+import com.kaiburr.task1.repository.ServerRepository;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class ServerServiceImpl implements ServerService {
+
+    @Autowired
+    private ServerRepository serverRepository;
+
+    @Override
+    public List<Server> findAll() {
+        return serverRepository.findAll();
+    }
+
+    @Override
+    public Optional<Server> findById(String Id) {
+        return serverRepository.findById(Id);
+    }
+
+    @Override
+    public void createOrUpdateServer(Server server) {
+        serverRepository.save(server);
+    }
+
+    @Override
+    public void deleteServerById(String Id) {
+        serverRepository.deleteById(Id);
+    }
+
+    @Override
+    public List<Server> findByName(String name) {
+        return serverRepository.findByName(name);
+    }
+
+    public boolean existsServerById(String id) {
+        return serverRepository.existsById(id);
+    }
+
+}
+
+DEMOAPPLICATION.JAVA
+
+package com.kaiburr.task1;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class DemoApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(DemoApplication.class, args);
+	}
+
+}

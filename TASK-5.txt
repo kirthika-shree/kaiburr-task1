@@ -1,0 +1,107 @@
+TASLK-5
+
+
+IMPORT LIBRARIES
+
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import nltk
+import re
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+
+nltk.download('stopwords')
+from nltk.corpus import stopwords
+stop_words = set(stopwords.words('english'))
+
+
+LOAD AND PREPROCESS DATA
+
+# Load data
+df = pd.read_csv("consumer_complaints.csv")
+
+# Keep only required columns
+df = df[['Consumer complaint narrative', 'Product']].dropna()
+
+# Label encoding for 4 target classes
+target_map = {
+    'Credit reporting, credit repair services, or other personal consumer reports': 0,
+    'Debt collection': 1,
+    'Consumer Loan': 2,
+    'Mortgage': 3
+}
+df = df[df['Product'].isin(target_map.keys())]
+df['label'] = df['Product'].map(target_map)
+
+# Clean text
+def clean_text(text):
+    text = text.lower()
+    text = re.sub(r'[^a-z\s]', '', text)
+    words = text.split()
+    words = [w for w in words if w not in stop_words]
+    return " ".join(words)
+
+df['clean_text'] = df['Consumer complaint narrative'].apply(clean_text)
+
+
+VECTORIZATION
+
+X = df['clean_text']
+y = df['label']
+
+# Convert text to TF-IDF vectors
+vectorizer = TfidfVectorizer(max_features=5000)
+X_vec = vectorizer.fit_transform(X)
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X_vec, y, test_size=0.2, random_state=42)
+
+
+MODEL TRAINING AND COMPARISION
+
+lr = LogisticRegression()
+lr.fit(X_train, y_train)
+y_pred_lr = lr.predict(X_test)
+
+print("Logistic Regression Accuracy:", accuracy_score(y_test, y_pred_lr))
+print(classification_report(y_test, y_pred_lr))
+
+
+nb = MultinomialNB()
+nb.fit(X_train, y_train)
+y_pred_nb = nb.predict(X_test)
+
+print("Naive Bayes Accuracy:", accuracy_score(y_test, y_pred_nb))
+print(classification_report(y_test, y_pred_nb))
+
+
+MODEL EVALUTION
+
+# Confusion matrix
+sns.heatmap(confusion_matrix(y_test, y_pred_lr), annot=True, fmt='d')
+plt.title("Logistic Regression Confusion Matrix")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.show()
+
+
+PREDICTION EXAMPLE
+
+sample = ["I am unable to get the loan even after eligibility. They are not responding."]
+sample_vec = vectorizer.transform(sample)
+pred = lr.predict(sample_vec)
+categories = {0: 'Credit Reporting', 1: 'Debt Collection', 2: 'Consumer Loan', 3: 'Mortgage'}
+print("Predicted Category:", categories[pred[0]])
+
+
+EXAMPLE OUTPUT
+
+Logistic Regression Accuracy: 0.85
+Naive Bayes Accuracy: 0.80
+
+Predicted Category: Consumer Loan
